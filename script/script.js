@@ -4,7 +4,7 @@ const finishingRegex = /[ \.,!?;:]/;
 let currentWord = "";
 let wordStartIndex = 0;
 
-let scrambleRate = 1;
+let scrambleRate = 0.3;
 let scrambleDelay = 2000;
 
 let pendingWords = [];
