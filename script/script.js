@@ -1,45 +1,73 @@
-const $ = document;
-const notePad = $.getElementById("notePad");
+const notePad = document.getElementById("notePad");
+const finishingRegex = /[ \.,!?;:]/;
 
-const finishingRegex = /[ .,?!]/;
+let currentWord = "";
+let wordStartIndex = 0;
 
-let lastTypedLetter = "";
-let lastWord = "";
-let scrambledWord = "";
+let scrambleRate = 1;
+let scrambleDelay = 2000;
 
-function scrambleLetters(word) {
+let pendingWords = [];
+
+function scrambleWord(word) {
   if (word.length <= 3) return word;
+  const first = word[0];
+  const last = word[word.length - 1];
+  let middle = word.slice(1, -1).split("");
 
-  const chars = word.split("");
-  const middle = chars.slice(1, -1);
+  if (middle.length > 1) {
+    let i = Math.floor(Math.random() * middle.length);
+    let j;
+    do {
+      j = Math.floor(Math.random() * middle.length);
+    } while (i === j);
+    [middle[i], middle[j]] = [middle[j], middle[i]];
+  }
 
-  for (let i = middle.length - 1; i > 0; i--) {
-    if (Math.random() < 0.3) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [middle[i], middle[j]] = [middle[j], middle[i]];
+  const vowels = "aeiou";
+  if (Math.random() < 0.3) {
+    for (let k = 0; k < middle.length; k++) {
+      if (vowels.includes(middle[k].toLowerCase())) {
+        middle[k] = vowels[Math.floor(Math.random() * vowels.length)];
+        break;
+      }
     }
   }
 
-  return chars[0] + middle.join("") + chars[chars.length - 1];
+  return first + middle.join("") + last;
 }
 
 notePad.addEventListener("input", (event) => {
-  lastTypedLetter = event.data;
+  const typed = event.data;
+  if (!typed) return;
 
-  if (lastTypedLetter === null) {
-  } else if (finishingRegex.test(lastTypedLetter) || lastTypedLetter === " ") {
-    if (lastWord.length > 0) {
-      console.log("Word is finished:", scrambleLetters(lastWord));
-      lastWord = "";
+  const cursorPos = notePad.selectionStart;
+
+  if (finishingRegex.test(typed)) {
+    if (currentWord.length > 3 && Math.random() < scrambleRate) {
+      pendingWords.push({
+        value: currentWord,
+        start: wordStartIndex,
+      });
+
+      setTimeout(() => {
+        const val = notePad.value;
+        pendingWords.forEach((wordObj) => {
+          const { value, start } = wordObj;
+          if (val.slice(start, start + value.length) === value) {
+            const scrambled = scrambleWord(value);
+            notePad.value =
+              val.slice(0, start) + scrambled + val.slice(start + value.length);
+          }
+        });
+        pendingWords = [];
+      }, scrambleDelay);
     }
+    currentWord = "";
   } else {
-    lastWord += lastTypedLetter;
+    if (currentWord.length === 0) {
+      wordStartIndex = notePad.selectionStart - 1;
+    }
+    currentWord += typed;
   }
-
-  if (lastWord.length > 0) {
-    scrambledWord = scrambleLetters(lastWord);
-  }
-
-  const text = notePad.value;
-  console.log(text.split(" "));
 });
